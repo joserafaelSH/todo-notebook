@@ -57,10 +57,11 @@ internal static class Ui
         };
     }
 
-    public static string FormatDate(DateOnly d, DateOnly today)
+    public static string FormatDate(DateOnly d, DateOnly today, TimeOnly? time = null)
     {
         int diff = d.DayNumber - today.DayNumber;
         var text = d.ToString("MMM d, yyyy", System.Globalization.CultureInfo.CurrentCulture);
+        if (time is TimeOnly t) text += " · " + t.ToString("HH:mm");
         return diff switch
         {
             0 => "Today · " + text,

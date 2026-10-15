@@ -16,6 +16,7 @@ public sealed class EditorWindow : Window
     private readonly TextBox _title;
     private readonly TextBox _description;
     private readonly DatePicker _date;
+    private readonly TextBox _time;
     private readonly TextBlock _hint;
     private TodoItem? _editing;
 
@@ -41,6 +42,17 @@ public sealed class EditorWindow : Window
             Margin = new Thickness(0, 0, 0, 8),
         }, "RoundedTextBox");
         _date = Ui.Styled(new DatePicker { SelectedDate = DateTime.Today }, "RoundedDatePicker");
+        _time = Ui.Styled(new TextBox
+        {
+            FontSize = 13, Padding = new Thickness(10, 8, 10, 8), MaxLength = 5, Width = 96,
+            Margin = new Thickness(8, 0, 0, 0), ToolTip = "Reminder time (HH:mm). Leave empty for the 10:00 / 16:00 summary.",
+        }, "RoundedTextBox");
+        var when = new Grid();
+        when.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        when.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        when.Children.Add(_date);
+        Grid.SetColumn(_time, 1);
+        when.Children.Add(_time);
         _hint = Ui.Text("", "MutedTextBrush", 11.5);
         _hint.Margin = new Thickness(0, 10, 0, 0);
 
@@ -48,7 +60,7 @@ public sealed class EditorWindow : Window
         stack.Children.Add(_heading);
         stack.Children.Add(_title);
         stack.Children.Add(_description);
-        stack.Children.Add(_date);
+        stack.Children.Add(when);
         stack.Children.Add(_hint);
 
         var card = Ui.Styled(new Border { CornerRadius = new CornerRadius(14), Child = stack, Margin = new Thickness(12) }, "CardBorder");
@@ -56,6 +68,7 @@ public sealed class EditorWindow : Window
         Content = card;
 
         _title.KeyDown += (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; Commit(); } };
+        _time.KeyDown += (_, e) => { if (e.Key == Key.Enter) { e.Handled = true; Commit(); } };
         _description.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control) { e.Handled = true; Commit(); }
@@ -63,7 +76,7 @@ public sealed class EditorWindow : Window
         KeyDown += (_, e) => { if (e.Key == Key.Escape && !e.Handled) { e.Handled = true; Hide(); } };
         MouseLeftButtonDown += (_, e) =>
         {
-            if (e.OriginalSource is not TextBox and not DatePicker) { try { DragMove(); } catch { } }
+            if (e.OriginalSource is not TextBox and not DatePicker and not System.Windows.Controls.Primitives.DatePickerTextBox) { try { DragMove(); } catch { } }
         };
     }
 
@@ -75,7 +88,9 @@ public sealed class EditorWindow : Window
         _title.Text = item?.Title ?? "";
         _description.Text = item?.Description ?? "";
         _date.SelectedDate = item == null ? DateTime.Today : item.Date?.ToDateTime(TimeOnly.MinValue);
-        _hint.Text = item == null ? "Enter to add · Esc to close" : "Enter to save · Ctrl+Enter in description · Esc to cancel";
+        _time.Text = item?.Time?.ToString("HH:mm") ?? "";
+        _hint.Text = item == null ? "Time (HH:mm) is optional and sets the reminder · Enter to add · Esc to close"
+                                  : "Enter to save · Ctrl+Enter in description · Esc to cancel";
         Show();
         Activate();
         Topmost = true;
@@ -92,16 +107,30 @@ public sealed class EditorWindow : Window
         if (title.Length == 0) return;
         var description = _description.Text.Trim();
         DateOnly? date = _date.SelectedDate is DateTime d ? DateOnly.FromDateTime(d) : null;
+        TimeOnly? time = null;
+        var timeText = _time.Text.Trim();
+        if (timeText.Length > 0)
+        {
+            if (!TimeOnly.TryParseExact(timeText.PadLeft(5, '0'), "HH:mm", out var parsed) && !TimeOnly.TryParse(timeText, out parsed))
+            {
+                _hint.Text = "Invalid time. Use HH:mm, e.g. 14:30.";
+                _time.Focus();
+                return;
+            }
+            if (date == null) { _hint.Text = "A time needs a date."; return; }
+            time = parsed;
+        }
         if (_editing != null)
         {
-            Store.Update(_editing, title, description, date);
+            Store.Update(_editing, title, description, date, time);
             _editing = null;
             Hide();
             return;
         }
-        Store.Add(title, description, date);
+        Store.Add(title, description, date, time);
         _title.Text = "";
         _description.Text = "";
+        _time.Text = "";
         _hint.Text = $"Added “{(title.Length > 40 ? title[..40] + "…" : title)}”. Add another or press Esc.";
         _title.Focus();
     }

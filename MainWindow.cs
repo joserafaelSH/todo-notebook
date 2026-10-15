@@ -162,7 +162,7 @@ public sealed class MainWindow : Window
         if (item.Date is DateOnly d)
         {
             var color = item.Done ? null : d < today ? "DangerColor" : d == today ? "AccentColor" : null;
-            body.Children.Add(color != null ? Ui.Chip(Ui.FormatDate(d, today), color) : MutedChip(Ui.FormatDate(d, today)));
+            body.Children.Add(color != null ? Ui.Chip(Ui.FormatDate(d, today, item.Time), color) : MutedChip(Ui.FormatDate(d, today, item.Time)));
         }
 
         var delete = Ui.IconButton("", "Delete");

@@ -9,8 +9,19 @@ public sealed class TodoItem
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
     public DateOnly? Date { get; set; }
+    /// <summary>Optional time of day on <see cref="Date"/>; the tray reminder for this todo fires then.</summary>
+    public TimeOnly? Time { get; set; }
+    /// <summary>True once the reminder for the current Date/Time was shown (or skipped because it was already past).</summary>
+    public bool Notified { get; set; }
     public bool Done { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
+}
+
+public static class TodoItemExtensions
+{
+    /// <summary>The moment the reminder should fire, or null when the todo has no time.</summary>
+    public static DateTime? DueAt(this TodoItem t) =>
+        t.Date is DateOnly d && t.Time is TimeOnly time ? d.ToDateTime(time) : null;
 }
 
 public sealed class AppSettings
@@ -59,21 +70,40 @@ public static class Store
         .ThenBy(t => t.CreatedAt)
         .ToList();
 
-    public static void Add(string title, string description, DateOnly? date)
+    public static void Add(string title, string description, DateOnly? date, TimeOnly? time)
     {
-        Todos.Add(new TodoItem { Title = title, Description = description, Date = date });
+        var item = new TodoItem { Title = title, Description = description };
+        Apply(item, date, time);
+        Todos.Add(item);
         SaveTodos();
     }
 
-    public static void Update(TodoItem item, string title, string description, DateOnly? date)
+    public static void Update(TodoItem item, string title, string description, DateOnly? date, TimeOnly? time)
     {
-        item.Title = title; item.Description = description; item.Date = date;
+        item.Title = title; item.Description = description;
+        Apply(item, date, time);
         SaveTodos();
+    }
+
+    /// <summary>A time needs a date. A reminder whose moment has already passed is not fired retroactively.</summary>
+    private static void Apply(TodoItem item, DateOnly? date, TimeOnly? time)
+    {
+        time = date == null ? null : time;
+        var changed = item.Date != date || item.Time != time;
+        item.Date = date;
+        item.Time = time;
+        if (changed) item.Notified = item.DueAt() is not DateTime due || due <= DateTime.Now;
     }
 
     public static void SetDone(TodoItem item, bool done) { item.Done = done; SaveTodos(); }
 
     public static void Remove(TodoItem item) { Todos.Remove(item); SaveTodos(); }
+
+    public static void MarkNotified(IEnumerable<TodoItem> items)
+    {
+        foreach (var t in items) t.Notified = true;
+        Write(TodosPath, Todos);
+    }
 
     public static void SaveSettings() => Write(SettingsPath, Settings);
 

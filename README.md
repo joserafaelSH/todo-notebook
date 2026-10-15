@@ -1,9 +1,9 @@
-# Todo Notebook
+﻿# Todo Notebook
 
-A tiny Windows todo list. Each todo is a card with a title, a description and a date. The whole UI is the list of cards: open it with a hotkey, add todos from anywhere with a quick-add hotkey, and get a tray reminder at 10:00 and 16:00. Same look as [Goal Notebook](https://github.com/joserafaelSH/goal-notebook) (dark theme only for now).
+A tiny Windows todo list. Each todo is a card with a title, a description and a date. The whole UI is the list of cards: open it with a hotkey, add todos from anywhere with a quick-add hotkey, and get a tray reminder at the time you set on each todo (todos without a time are summarised at 10:00 and 16:00). Same look as [Goal Notebook](https://github.com/joserafaelSH/goal-notebook) (dark theme only for now).
 
 - **Ctrl+Alt+T** shows or hides the list, **Ctrl+Alt+A** opens quick add (Enter adds, Esc closes), **Ctrl+N** adds from inside the list
-- Click a card to edit it; tick it to mark it done
+- Each todo has a date and an optional time (HH:mm); the tray notification fires at that time\n- Click a card to edit it; tick it to mark it done
 - Your data is a plain `todos.json` in `%AppData%\TodoNotebook` (hotkeys live in `settings.json` next to it)
 - Everything stays on your machine; there is no account and no telemetry
 
@@ -32,3 +32,4 @@ git push origin v1.0.0
 ## License
 
 [MIT](LICENSE)
+
